@@ -1,4 +1,3 @@
-// src/screens/RestaurantDetailScreen.js
 import React, { useState, useEffect } from 'react';
 import {
     View,
@@ -13,9 +12,18 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import NumericInput   from 'react-native-numeric-input';
 import useApi         from '../api/api';
 
+/* helper: μετατρέπει Date → "YYYY-MM-DD HH:MM:SS" (τοπική ώρα) */
+const toMySQLLocal = (d) => {
+    const pad = (n) => n.toString().padStart(2, '0');
+    return (
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+        ` ${pad(d.getHours())}:${pad(d.getMinutes())}:00`
+    );
+};
+
 export default function RestaurantDetailScreen({ route, navigation }) {
-    const { uuid } = route.params;
-    const api = useApi();
+    const { uuid } = route.params;           // restaurant_uuid
+    const api      = useApi();
 
     const [restaurant, setRestaurant]         = useState(null);
     const [date, setDate]                     = useState(new Date());
@@ -26,8 +34,8 @@ export default function RestaurantDetailScreen({ route, navigation }) {
 
     useEffect(() => {
         api(`/restaurants/${uuid}`)
-            .then(data => setRestaurant(data))
-            .catch(err => Alert.alert('Σφάλμα', err.message))
+            .then(setRestaurant)
+            .catch((err) => Alert.alert('Σφάλμα', err.message))
             .finally(() => setLoading(false));
     }, [uuid]);
 
@@ -45,7 +53,7 @@ export default function RestaurantDetailScreen({ route, navigation }) {
                 method: 'POST',
                 body: JSON.stringify({
                     restaurant_id: restaurant.restaurant_id,
-                    reservation_datetime: date.toISOString(),
+                    reservation_datetime: toMySQLLocal(date),   // τοπική ώρα
                     guests
                 })
             });
@@ -64,6 +72,8 @@ export default function RestaurantDetailScreen({ route, navigation }) {
             {restaurant.description && (
                 <Text style={styles.description}>{restaurant.description}</Text>
             )}
+
+            {/* Date / Time pickers */}
             <View style={styles.pickerRow}>
                 <Button
                     title={`Ημερομηνία: ${date.toLocaleDateString()}`}
@@ -101,6 +111,7 @@ export default function RestaurantDetailScreen({ route, navigation }) {
                     />
                 )}
             </View>
+
             <Text style={styles.label}>Άτομα:</Text>
             <NumericInput
                 value={guests}
@@ -110,6 +121,7 @@ export default function RestaurantDetailScreen({ route, navigation }) {
                 totalHeight={40}
                 rounded
             />
+
             <View style={styles.submitBtn}>
                 <Button title="Κράτηση" onPress={onSubmit} />
             </View>
