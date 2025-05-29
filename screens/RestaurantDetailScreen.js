@@ -12,7 +12,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import NumericInput   from 'react-native-numeric-input';
 import useApi         from '../api/api';
 
-/* helper: μετατρέπει Date → "YYYY-MM-DD HH:MM:SS" (τοπική ώρα) */
+/* helper: Date -> "YYYY-MM-DD HH:MM:SS" σε τοπική ώρα */
 const toMySQLLocal = (d) => {
     const pad = (n) => n.toString().padStart(2, '0');
     return (
@@ -22,7 +22,7 @@ const toMySQLLocal = (d) => {
 };
 
 export default function RestaurantDetailScreen({ route, navigation }) {
-    const { uuid } = route.params;           // restaurant_uuid
+    const { uuid } = route.params;    // restaurant_uuid
     const api      = useApi();
 
     const [restaurant, setRestaurant]         = useState(null);
@@ -53,7 +53,7 @@ export default function RestaurantDetailScreen({ route, navigation }) {
                 method: 'POST',
                 body: JSON.stringify({
                     restaurant_id: restaurant.restaurant_id,
-                    reservation_datetime: toMySQLLocal(date),   // τοπική ώρα
+                    reservation_datetime: toMySQLLocal(date),
                     guests
                 })
             });
@@ -68,12 +68,14 @@ export default function RestaurantDetailScreen({ route, navigation }) {
         <ScrollView contentContainerStyle={styles.container}>
             <Text style={styles.title}>{restaurant.name}</Text>
             <Text style={styles.subtitle}>{restaurant.address}</Text>
+            {/* --- ΝΕΑ ΓΡΑΜΜΗ ΤΗΛΕΦΩΝΟΥ --- */}
+            <Text style={styles.subtitle}>Τηλ.: {restaurant.phone}</Text>
             <Text style={styles.subtitleSmall}>Περιοχή: {restaurant.region}</Text>
             {restaurant.description && (
                 <Text style={styles.description}>{restaurant.description}</Text>
             )}
 
-            {/* Date / Time pickers */}
+            {/* Pickers */}
             <View style={styles.pickerRow}>
                 <Button
                     title={`Ημερομηνία: ${date.toLocaleDateString()}`}
