@@ -1,29 +1,51 @@
 // src/screens/RestaurantDetailScreen.js
-
-import React, { useState } from 'react';
-import { View, Text, Button, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+    View,
+    ScrollView,
+    Text,
+    Button,
+    Alert,
+    ActivityIndicator,
+    StyleSheet
+} from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import NumericInput   from 'react-native-numeric-input';
 import useApi         from '../api/api';
-import styles         from '../styles/restaurantStyles';
 
 export default function RestaurantDetailScreen({ route, navigation }) {
-    const { restaurant } = route.params;
+    const { uuid } = route.params;
     const api = useApi();
 
-    const [date, setDate]                   = useState(new Date());
+    const [restaurant, setRestaurant]         = useState(null);
+    const [date, setDate]                     = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
-    const [guests, setGuests]               = useState(2);
+    const [guests, setGuests]                 = useState(2);
+    const [loading, setLoading]               = useState(true);
+
+    useEffect(() => {
+        api(`/restaurants/${uuid}`)
+            .then(data => setRestaurant(data))
+            .catch(err => Alert.alert('Σφάλμα', err.message))
+            .finally(() => setLoading(false));
+    }, [uuid]);
+
+    if (loading || !restaurant) {
+        return (
+            <View style={styles.loaderContainer}>
+                <ActivityIndicator size="large" />
+            </View>
+        );
+    }
 
     const onSubmit = async () => {
-        const iso = date.toISOString();
         try {
             await api('/reservations', {
                 method: 'POST',
                 body: JSON.stringify({
                     restaurant_id: restaurant.restaurant_id,
-                    reservation_datetime: iso,
+                    reservation_datetime: date.toISOString(),
                     guests
                 })
             });
@@ -35,69 +57,74 @@ export default function RestaurantDetailScreen({ route, navigation }) {
     };
 
     return (
-        <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.container}>
             <Text style={styles.title}>{restaurant.name}</Text>
-            {restaurant.description ? (
-                <Text style={styles.subtitle}>{restaurant.description}</Text>
-            ) : null}
-
-            <Button
-                title={`Ημερομηνία: ${date.toLocaleDateString()}`}
-                onPress={() => setShowDatePicker(true)}
-            />
-            {showDatePicker && (
-                <DateTimePicker
-                    value={date}
-                    mode="date"
-                    display="default"
-                    onChange={(_, d) => {
-                        setShowDatePicker(false);
-                        if (d) {
-                            const newDate = new Date(date);
-                            newDate.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
-                            setDate(newDate);
-                            setShowTimePicker(true);
-                        }
-                    }}
-                />
+            <Text style={styles.subtitle}>{restaurant.address}</Text>
+            <Text style={styles.subtitleSmall}>Περιοχή: {restaurant.region}</Text>
+            {restaurant.description && (
+                <Text style={styles.description}>{restaurant.description}</Text>
             )}
-
-            {showTimePicker && (
-                <DateTimePicker
-                    value={date}
-                    mode="time"
-                    display="default"
-                    onChange={(_, t) => {
-                        setShowTimePicker(false);
-                        if (t) {
-                            const newDate = new Date(date);
-                            newDate.setHours(t.getHours(), t.getMinutes());
-                            setDate(newDate);
-                        }
-                    }}
+            <View style={styles.pickerRow}>
+                <Button
+                    title={`Ημερομηνία: ${date.toLocaleDateString()}`}
+                    onPress={() => setShowDatePicker(true)}
                 />
-            )}
-
-            <Text style={{ marginTop: 20, fontSize: 16 }}>Άτομα:</Text>
+                {showDatePicker && (
+                    <DateTimePicker
+                        value={date}
+                        mode="date"
+                        display="default"
+                        onChange={(_, d) => {
+                            setShowDatePicker(false);
+                            if (d) {
+                                const nd = new Date(date);
+                                nd.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
+                                setDate(nd);
+                                setShowTimePicker(true);
+                            }
+                        }}
+                    />
+                )}
+                {showTimePicker && (
+                    <DateTimePicker
+                        value={date}
+                        mode="time"
+                        display="default"
+                        onChange={(_, t) => {
+                            setShowTimePicker(false);
+                            if (t) {
+                                const nd = new Date(date);
+                                nd.setHours(t.getHours(), t.getMinutes());
+                                setDate(nd);
+                            }
+                        }}
+                    />
+                )}
+            </View>
+            <Text style={styles.label}>Άτομα:</Text>
             <NumericInput
                 value={guests}
                 onChange={setGuests}
                 minValue={1}
                 totalWidth={140}
                 totalHeight={40}
-                iconSize={20}
-                step={1}
-                valueType="integer"
                 rounded
-                textColor="#000"
-                iconStyle={{ color: 'white' }}
-                rightButtonBackgroundColor="#007AFF"
-                leftButtonBackgroundColor="#007AFF"
             />
-
-            <View style={{ marginTop: 30 }}>
+            <View style={styles.submitBtn}>
                 <Button title="Κράτηση" onPress={onSubmit} />
             </View>
-        </View>
+        </ScrollView>
     );
 }
+
+const styles = StyleSheet.create({
+    container: { padding: 15, backgroundColor: '#fff' },
+    loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    title: { fontSize: 20, fontWeight: 'bold', marginBottom: 5 },
+    subtitle: { fontSize: 16, marginBottom: 3 },
+    subtitleSmall: { fontSize: 14, color: '#555', marginBottom: 10 },
+    description: { fontSize: 14, color: '#333', marginBottom: 20 },
+    pickerRow: { marginBottom: 20 },
+    label: { fontSize: 16, marginBottom: 5 },
+    submitBtn: { marginTop: 20 }
+});
