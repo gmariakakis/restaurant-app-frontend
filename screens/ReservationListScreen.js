@@ -26,7 +26,19 @@ export default function ReservationListScreen() {
         setLoading(true);
         try {
             const data = await api('/reservations/me');
-            setReservations(data);
+               /* -- ΝΕΟ: ταξινόμηση -- */
+                  const now = new Date();
+               const upcoming = data
+                     .filter(r => new Date(r.reservation_datetime) >= now)
+                 .sort((a, b) =>
+                       new Date(a.reservation_datetime) - new Date(b.reservation_datetime)
+                     );
+               const past = data
+                     .filter(r => new Date(r.reservation_datetime) < now)
+                 .sort((a, b) =>
+                       new Date(b.reservation_datetime) - new Date(a.reservation_datetime)
+                     );
+            setReservations([...upcoming, ...past]);     // νέα λίστα
         } catch (err) {
             console.warn('Error loading reservations:', err.message);
         } finally {
