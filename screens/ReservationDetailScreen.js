@@ -1,57 +1,60 @@
 import React from 'react';
-import { View, Text, Button, Alert, StyleSheet } from 'react-native';
+import { View, Text, Button, Alert, ScrollView, StyleSheet } from 'react-native';
 import useApi from '../api/api';
 
 export default function ReservationDetailScreen({ route, navigation }) {
-    const { reservation } = route.params;
+    const { reservation } = route.params;        // έρχεται ολόκληρο object
     const api = useApi();
 
-    const onDelete = () => {
-        Alert.alert('Ακύρωση Κράτησης', 'Θέλετε σίγουρα να ακυρώσετε;', [
-            { text: 'Όχι' },
-            {
-                text: 'Ναι',
-                onPress: async () => {
-                    try {
-                        const { reservation_uuid: uuid } = reservation;
-                        await api(`/reservations/${uuid}`, { method: 'DELETE' });
-                        Alert.alert('Επιτυχία', 'Η κράτηση ακυρώθηκε.');
-                        navigation.popToTop(); // επιστροφή στη λίστα
-                    } catch (err) {
-                        Alert.alert('Σφάλμα', err.message);
-                    }
-                }
-            }
-        ]);
+    /* === υπολογισμός αν είναι παρελθόν === */
+    const reservationDate = new Date(reservation.reservation_datetime);
+    const isPast = reservationDate < new Date();   // true = παλαιότερη
+
+    const handleDelete = async () => {
+        try {
+            await api(`/reservations/${reservation.reservation_uuid}`, { method: 'DELETE' });
+            Alert.alert('Επιτυχία', 'Η κράτηση διαγράφηκε.');
+            navigation.popToTop();                     // επιστρέφει στη λίστα
+        } catch (err) {
+            Alert.alert('Σφάλμα', err.message);
+        }
     };
 
     return (
-        <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.container}>
             <Text style={styles.title}>{reservation.restaurant_name}</Text>
             <Text style={styles.field}>
                 Ημερομηνία & Ώρα:{' '}
-                {new Date(reservation.reservation_datetime).toLocaleString()}
+                {reservationDate.toLocaleDateString()}{' '}
+                {reservationDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </Text>
             <Text style={styles.field}>Άτομα: {reservation.guests}</Text>
 
-            <View style={styles.buttons}>
-                <Button
-                    title="Επεξεργασία"
-                    onPress={() => navigation.navigate('EditReservation', { reservation })}
-                />
-                <Button
-                    title="Διαγραφή"
-                    color="red"
-                    onPress={onDelete}
-                />
+            <View style={styles.buttonsRow}>
+                {/* δείχνουμε ΕΠΕΞΕΡΓΑΣΙΑ μόνο αν ΔΕΝ είναι παλαιότερη */}
+                {!isPast && (
+                    <View style={styles.buttonWrap}>
+                        <Button
+                            title="Επεξεργασία"
+                            onPress={() =>
+                                navigation.navigate('EditReservation', { reservation })
+                            }
+                        />
+                    </View>
+                )}
+
+                <View style={styles.buttonWrap}>
+                    <Button title="Διαγραφή" color="#FF3B30" onPress={handleDelete} />
+                </View>
             </View>
-        </View>
+        </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 16 },
-    title:     { fontSize: 24, fontWeight: 'bold', marginBottom: 16 },
-    field:     { fontSize: 16, marginBottom: 12 },
-    buttons:   { flexDirection: 'row', justifyContent: 'space-between', marginTop: 24 }
+    container: { padding: 16, backgroundColor: '#fff' },
+    title:     { fontSize: 22, fontWeight: 'bold', marginBottom: 12 },
+    field:     { fontSize: 16, marginBottom: 8 },
+    buttonsRow:{ flexDirection: 'row', marginTop: 24 },
+    buttonWrap:{ marginRight: 12 }
 });
